@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "scenario_integration"
+version = "0.1.0"
+description = "Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Lara Bezerra" }]
+license = { text = "MIT" }
+dependencies = [
+"pandas>=2.0",
+"numpy>=1.24"
+]
+
+
+[project.urls]
+Homepage = "https://github.com/SoLaraS2/ScenarioIntegration"
+
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: scenario_integration
+Version: 0.1.0
+Summary: Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions
+Author: Lara Bezerra
+License: MIT
+Project-URL: Homepage, https://github.com/SoLaraS2/ScenarioIntegration
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.0
+Requires-Dist: numpy>=1.24
+
+# ScenarioIntegration
+Modeling tool now as a python package
+Notebook-first API for your Scenario Integration workflow.
+
+## Install (dev)
+```bash
+pip install -e .
