@@ -1,71 +1,105 @@
 from __future__ import annotations
-cprops = cprops.dropna(subset=["weather_datetime"])
-cprops["cooling_prop"] = pd.to_numeric(cprops["cooling_prop"], errors="coerce")
-prop_series = cprops.groupby("weather_datetime")["cooling_prop"].mean().astype("float32")
-ts_index = exist_df.index.get_level_values("weather_datetime").tz_localize(None)
-prop_series.index = prop_series.index.tz_localize(None)
-prop_series = prop_series[~prop_series.index.duplicated(keep="last")]
-prop = prop_series.reindex(ts_index)
-mean_prop = float(prop.mean()) if prop.notna().any() else 0.5
-prop = prop.fillna(mean_prop).to_numpy(dtype="float32")
+from dataclasses import dataclass
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import textwrap
 
+# -------- public helper --------
+STATE_COLS: list[str] = []  # will be set after first enforce_schema call
 
-# Build per-(wy,ts) target using index ratios
-wy_vals = exist_df.index.get_level_values("weather_year").to_numpy()
-ratios = np.array([float(wy_index.get(int(w), 1.0)) for w in wy_vals], dtype="float32")
-target_vec = (float(adding_MW) * ratios).astype("float32")
+def enforce_schema(df: pd.DataFrame) -> pd.DataFrame:
+    global STATE_COLS
+    if "weather_datetime" in df.columns:
+        df["weather_datetime"] = pd.to_datetime(df["weather_datetime"], errors="coerce")
+    # infer state cols (anything not meta)
+    meta = {"sector", "subsector", "dispatch_feeder", "weather_datetime", "weather_year"}
+    STATE_COLS = [c for c in df.columns if c not in meta]
+    for c in STATE_COLS:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df[STATE_COLS] = df[STATE_COLS].fillna(0.0)
+    for c in ("sector", "subsector", "dispatch_feeder"):
+        if c in df.columns:
+            df[c] = df[c].astype("category")
+    return df
 
+# -------- package API --------
+@dataclass
+class ScenarioIntegrator:
+    """Notebook-friendly wrapper. Fill in real logic next."""
+    data_root: Path = Path("./files")
 
-# Remainder after existing
-existing_total = exist_df.sum(axis=1).to_numpy(dtype="float32")
-remain = (target_vec - existing_total).astype("float32")
-remain[remain < 0] = 0.0
-if float(remain.sum()) <= 0.0:
-# nothing to add; return original (schema-enforced)
-out = []
-for chunk in pd.read_csv(src, chunksize=50_000, low_memory=False):
-out.append(enforce_schema(chunk))
-return pd.concat(out, ignore_index=True)
+    # step 1 placeholder
+    def process(
+        self,
+        *,
+        year: int,
+        scenario: str,
+        custom_values: dict | None = None,
+        fallback_scenarios: dict | None = None,
+        state_base_scenarios: dict | None = None,
+        shed_shift_enabled: dict | None = None,
+        diagnostics: bool = False,
+    ) -> pd.DataFrame:
+        # temporary: load the base CSV to prove import/flow works
+        path = self.data_root / f"{year}_{scenario}.csv.gz"
+        df = pd.read_csv(path)
+        return enforce_schema(df)
+    @property
+    def help(self):
+        """Pretty, pandas-style help on what you can tweak."""
+        print("ScenarioIntegrator Help".ljust(80, "="))
+        print("Main methods:\n")
 
+        print("• process(year, scenario, *, ...)")
+        print(textwrap.dedent("""
+            - year: int
+            - scenario: str ("baseline" | "central" | "conservative")
+            - custom_values: dict[(state, subsector) -> float]
+                  Example: {("texas","passenger car"): 1.10}
+            - fallback_scenarios: dict[(state, subsector) -> scenario]
+            - state_base_scenarios: dict[state -> scenario]
+            - shed_shift_enabled: dict[state -> bool]
+            - diagnostics: bool
+        """).strip())
 
-# Split into COOL/IT, then across states
-scaled_total = remain[:, None].astype("float32")
-cool_share = (scaled_total * prop[:, None]).astype("float32")
-it_share = (scaled_total * (1.0 - prop)[:, None]).astype("float32")
-cool_mat = (cool_share * vec_cool[None, :]).astype("float32")
-it_mat = (it_share * vec_it[None, :]).astype("float32")
+        print("\n• add_datacenter_capacity(year, base_year, *, ...)")
+        print(textwrap.dedent("""
+            - adding_MW: float = 100_000
+                  Total MW to add across all states
+            - cooling_prop_scenario: str
+                  One of {"average","baseline","central","conservative"}
+            - wy_scale_scenario: str
+                  One of {"average","baseline","central","conservative"}
+            - src_path: Path | None
+                  Override input file location
+        """).strip())
 
+        print("\nData root (where CSVs live):")
+        print(f"  {self.data_root.resolve()}")
 
-ts_vals = exist_df.index.get_level_values("weather_datetime").to_numpy()
-df_cool = pd.DataFrame({
-"subsector": np.full(len(ts_vals), "data center cooling", dtype=object),
-"weather_datetime": ts_vals,
-"sector": np.full(len(ts_vals), "commercial", dtype=object),
-"dispatch_feeder": np.full(len(ts_vals), "Commercial", dtype=object),
-**{col: cool_mat[:, i] for i, col in enumerate(state_cols)}
-})
-df_it = pd.DataFrame({
-"subsector": np.full(len(ts_vals), "data center it", dtype=object),
-"weather_datetime": ts_vals,
-"sector": np.full(len(ts_vals), "commercial", dtype=object),
-"dispatch_feeder": np.full(len(ts_vals), "Commercial", dtype=object),
-**{col: it_mat[:, i] for i, col in enumerate(state_cols)}
-})
-df_cool = enforce_schema(df_cool)
-df_it = enforce_schema(df_it)
+        print("=" * 80)
+        return None
 
+    # step 2 placeholder
+    def add_datacenter_capacity(
+        self,
+        *,
+        year: int,
+        base_year: int,
+        adding_MW: float = 100_000.0,
+        cooling_prop_scenario: str = "average",
+        wy_scale_scenario: str = "average",
+        src_path: str | Path | None = None,
+    ) -> pd.DataFrame:
+        # temporary: just echo the input file (so package imports fine)
+        src = Path(src_path) if src_path else (self.data_root / "files" / f"{year}_custom_output.csv")
+        df = pd.read_csv(src)
+        return enforce_schema(df)
 
-# Return original + appended DC blocks (schema enforced)
-orig = []
-for chunk in pd.read_csv(src, chunksize=50_000, low_memory=False):
-orig.append(enforce_schema(chunk))
-base_df = pd.concat(orig, ignore_index=True)
-return pd.concat([base_df, df_cool, df_it], ignore_index=True)
-
-
-def add_datacenter_capacity_to_csv(self, out_path: os.PathLike | str, **kwargs) -> str:
-df = self.add_datacenter_capacity(**kwargs)
-out_path = str(out_path)
-Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-df.to_csv(out_path, index=False)
-return out_path
+    def add_datacenter_capacity_to_csv(self, out_path: str | Path, **kwargs) -> str:
+        df = self.add_datacenter_capacity(**kwargs)
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_path, index=False)
+        return str(out_path)
