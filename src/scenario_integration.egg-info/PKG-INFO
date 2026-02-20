@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: scenario_integration
-Version: 0.1.0
-Summary: Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions
+Version: 0.2.5
+Summary: Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions (si.ScenarioIntegrator().help to get more help)
 Author: Lara Bezerra
 License: MIT
 Project-URL: Homepage, https://github.com/SoLaraS2/ScenarioIntegration

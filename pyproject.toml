@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scenario_integration"
-version = "0.1.0"
-description = "Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions"
+version = "0.2.5"
+description = "Scenario Integration: py/jupyter notebook-friendly APIs for state/subsector load shaping and DC additions (si.ScenarioIntegrator().help to get more help)"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Lara Bezerra" }]
